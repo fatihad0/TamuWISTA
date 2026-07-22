@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Buku Tamu Pro</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        :root { --bg-color: #f5f5f5; --text-color: #333; --card-bg: #ffffff; --primary-color: #6200EE; --input-bg: #fff; --input-border: #ccc; --border-color: #eee; }
+        body.dark-mode { --bg-color: #121212; --text-color: #e0e0e0; --card-bg: #1e1e1e; --primary-color: #bb86fc; --input-bg: #2c2c2c; --input-border: #555; --border-color: #333; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Roboto', sans-serif; }
+        body { background-color: var(--bg-color); color: var(--text-color); padding-bottom: 70px; transition: background 0.3s; }
+
+        .app-bar { background-color: var(--primary-color); color: white; padding: 16px; font-size: 20px; font-weight: 500; position: sticky; top: 0; z-index: 10; box-shadow: 0 2px 4px rgba(0,0,0,0.2); display: flex; justify-content: space-between; align-items: center; }
+        .screen { display: none; padding: 16px; animation: fadeIn 0.3s ease; }
+        .screen.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; font-size: 14px; color: var(--text-color); opacity: 0.8; margin-bottom: 4px; }
+        .form-group input, .form-group select { width: 100%; padding: 12px; font-size: 16px; background-color: var(--input-bg); color: var(--text-color); border: 1px solid var(--input-border); border-radius: 8px; outline: none; }
+        .btn-primary { width: 100%; background-color: var(--primary-color); color: white; padding: 14px; font-size: 16px; font-weight: 500; border: none; border-radius: 8px; cursor: pointer; }
+
+        .card { background: var(--card-bg); border-radius: 12px; padding: 16px; margin-bottom: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border: 1px solid var(--border-color); }
+        .card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; border-bottom: 1px solid var(--border-color); padding-bottom: 8px; }
+        .card-title { font-size: 18px; font-weight: 700; color: var(--primary-color); }
+        .card-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+        .btn-action { color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 500; }
+        
+        .btn-edit { background: #1976D2; } .btn-del { background: #d32f2f; }
+        .btn-checkout { background: #FF9800; color: #fff; } .btn-cancel-out { background: #4CAF50; color: #fff; }
+        
+        .badge-status { padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; color: white; margin-left: 8px; }
+        .badge-ada { background: #4CAF50; } .badge-keluar { background: #757575; }
+
+        .dash-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+        .dash-box { background: var(--primary-color); color: white; padding: 16px; border-radius: 12px; text-align: center; }
+        .dash-box h2 { font-size: 28px; margin: 8px 0; }
+        
+        .room-badge { display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; margin-right: 4px; margin-bottom: 4px; }
+        .room-filled { background-color: #f44336; color: white; } .room-empty { background-color: #4CAF50; color: white; }
+
+        .fab { position: fixed; bottom: 80px; right: 20px; width: 56px; height: 56px; border-radius: 50%; background-color: var(--primary-color); color: white; display: flex; justify-content: center; align-items: center; box-shadow: 0 4px 10px rgba(0,0,0,0.3); cursor: pointer; border: none; z-index: 999; }
+        .bottom-nav { position: fixed; bottom: 0; width: 100%; background-color: var(--card-bg); display: flex; justify-content: space-around; border-top: 1px solid var(--border-color); padding: 8px 0; z-index: 10; }
+        .nav-item { display: flex; flex-direction: column; align-items: center; color: #757575; font-size: 12px; cursor: pointer; width: 33.33%; padding: 8px 0; }
+        .nav-item.active { color: var(--primary-color); }
+        .setting-item { display: flex; justify-content: space-between; align-items: center; padding: 16px; background: var(--card-bg); border-bottom: 1px solid var(--border-color); cursor: pointer; }
+        .hidden { display: none !important; }
+        
+        .sync-indicator { font-size: 12px; font-weight: bold; display: flex; align-items: center; gap: 4px; background: rgba(0,0,0,0.2); padding: 4px 8px; border-radius: 12px; }
+
+        /* --- CSS NOTIFIKASI TOAST BARU --- */
+        #toast {
+            visibility: hidden;
+            min-width: 250px;
+            background-color: #4CAF50; /* Warna hijau sukses */
+            color: #fff;
+            text-align: center;
+            border-radius: 8px;
+            padding: 16px;
+            position: fixed;
+            z-index: 1000;
+            left: 50%;
+            bottom: 90px; /* Muncul di atas menu navigasi bawah */
+            transform: translateX(-50%);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            font-weight: 500;
+            transition: opacity 0.3s, bottom 0.3s;
+            opacity: 0;
+        }
+        #toast.show {
+            visibility: visible;
+            opacity: 1;
+            bottom: 100px; /* Sedikit animasi naik */
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-bar">
+        <span id="app-title">Beranda</span>
+        <div class="sync-indicator" id="sync-status"><i class="material-icons" style="font-size:16px;">cloud_sync</i> Loading...</div>
+    </div>
+
+    <!-- ELEMEN HTML NOTIFIKASI TOAST -->
+    <div id="toast">Data berhasil diperbarui!</div>
+
+    <datalist id="hint-nama"></datalist><datalist id="hint-asal"></datalist><datalist id="hint-keperluan"></datalist>
+
+    <!-- LAYAR 1: BERANDA -->
+    <div id="screen-beranda" class="screen active">
+        <div class="dash-summary">
+            <div class="dash-box"><div>Total Tamu Saat Ini</div><h2 id="dash-total">0</h2></div>
+            <div class="dash-box"><div>Kamar Terisi</div><h2 id="dash-kamar">0</h2></div>
+        </div>
+        <div class="card"><div class="card-title" style="margin-bottom: 8px;">Status Kamar</div><div id="room-status-container"></div></div>
+        <div class="card"><div class="card-title" style="margin-bottom: 8px;">Grafik Kedatangan</div>
+            <canvas id="tamuChart" width="100" height="60"></canvas>
+        </div>
+    </div>
+
+    <!-- LAYAR 2: DAFTAR TAMU -->
+    <div id="screen-list" class="screen">
+        <!-- Tambahan Kotak Pencarian -->
+        <div style="display: flex; justify-content: flex-end; align-items: center; gap: 10px; margin-bottom: 16px;">
+            <input type="text" id="search-tamu" placeholder="🔍 Cari nama, asal, atau keperluan..." onkeyup="cariTamu()" style="width: 30%; padding: 12px; border-radius: 8px; border: 1px solid var(--input-border); background: var(--input-bg); color: var(--text-color); outline: none;">
+        </div>
+        <div id="data-container"></div>
+    </div>
+
+    <!-- LAYAR 3: PENGATURAN -->
+    <div id="screen-settings" class="screen">
+        <div class="setting-item" onclick="toggleTheme()"><span>Mode Malam</span><i class="material-icons" id="theme-icon">dark_mode</i></div>
+        <div class="setting-item" onclick="switchTab('penerima-list')"><span>Kelola Penerima (CV)</span><i class="material-icons">chevron_right</i></div>
+        <div class="setting-item" onclick="switchTab('kamar-list')"><span>Kelola Daftar Kamar</span><i class="material-icons">chevron_right</i></div>
+        <div class="setting-item" onclick="fetchDataFromSheet()"><span>Paksa Sinkronisasi Cloud</span><i class="material-icons">sync</i></div>
+    </div>
+
+    <!-- LAYAR 4: FORM INPUT TAMU -->
+    <div id="screen-form" class="screen">
+        <form id="f">
+            <div class="form-group"><label>Waktu Masuk</label><input id="waktu" required></div>
+            <div class="form-group"><label>Penerima</label><select id="penerima" required></select></div>
+            <div class="form-group"><label>Nama Tamu</label><input id="nama" list="hint-nama" required autocomplete="off"></div>
+            <div class="form-group"><label>Pengikut</label><input id="pengikut" type="number" value="0" min="0"></div>
+            <div class="form-group"><label>Asal / Instansi</label><input id="asal" list="hint-asal" autocomplete="off"></div>
+            <div class="form-group"><label>Keperluan</label><input id="keperluan" list="hint-keperluan" autocomplete="off"></div>
+            <div class="form-group"><label>Kamar / Ruangan</label><select id="kamar"></select></div>
+            <button type="submit" class="btn-primary" id="btn-submit">SIMPAN DATA</button>
+            <button type="button" class="btn-primary" style="background:#888; margin-top:8px" onclick="switchTab('beranda')">BATAL</button>
+        </form>
+    </div>
+
+    <!-- LAYAR 5: KELOLA KAMAR -->
+    <div id="screen-kamar-list" class="screen">
+        <div style="margin-bottom: 12px;"><button class="btn-primary" onclick="tambahKamarPrompt()">+ Tambah Kamar Baru</button></div>
+        <div id="kamar-container"></div>
+    </div>
+
+    <!-- LAYAR 6: KELOLA PENERIMA -->
+    <div id="screen-penerima-list" class="screen">
+        <div style="margin-bottom: 12px;"><button class="btn-primary" onclick="bukaFormPenerima(-1)">+ Tambah Penerima Baru</button></div>
+        <div id="penerima-container"></div>
+    </div>
+
+    <!-- LAYAR 7: FORM PENERIMA -->
+    <div id="screen-penerima-form" class="screen">
+        <form id="form-penerima">
+            <div class="form-group"><label>Nama Penerima</label><input id="p-nama" required></div>
+            <div class="form-group"><label>No HP / WhatsApp</label><input id="p-nohp"></div>
+            <div class="form-group"><label>Alamat / Asal</label><input id="p-alamat"></div>
+            <button type="submit" class="btn-primary">SIMPAN PENERIMA</button>
+            <button type="button" class="btn-primary" style="background:#888; margin-top:8px" onclick="switchTab('penerima-list')">BATAL</button>
+        </form>
+    </div>
+
+    <button class="fab" id="fab-add" onclick="openForm()"><i class="material-icons">add</i></button>
+
+    <div class="bottom-nav">
+        <div class="nav-item active" onclick="switchTab('beranda')"><i class="material-icons">home</i><span>Beranda</span></div>
+        <div class="nav-item" onclick="switchTab('list')"><i class="material-icons">format_list_bulleted</i><span>Daftar Tamu</span></div>
+        <div class="nav-item" onclick="switchTab('settings')"><i class="material-icons">settings</i><span>Pengaturan</span></div>
+    </div>
+
+    <script>
+        // MASUKKAN URL GOOGLE APPS SCRIPT-MU DI BAWAH INI
+        const URL_SCRIPT = "https://script.google.com/macros/s/AKfycbyX7zLzAwPvdmy1V6DuQmk4N4l5R-jNj77F5M61Qo4EEFL8LTTBoQfLoMX9l971uU3w/exec";
+
+        let dataTamu = JSON.parse(localStorage.getItem('tamu') || '[]');
+        let dataKamar = JSON.parse(localStorage.getItem('kamarData') || '[]');
+        let dataPenerima = JSON.parse(localStorage.getItem('penerimaData') || '[]');
+        
+        let editIndex = -1; 
+        let editPenerimaIndex = -1;
+        let chartInstance = null; 
+        let timerWaktu = null;
+
+        // --- FUNGSI NOTIFIKASI BARU ---
+        function showNotification(pesan) {
+            let toast = document.getElementById("toast");
+            toast.innerText = pesan;          // Ubah teks sesuai pesan yang dikirim
+            toast.classList.add("show");      // Munculkan notifikasi
+            
+            // Hilangkan notifikasi secara otomatis setelah 3 detik (3000 ms)
+            setTimeout(() => { 
+                toast.classList.remove("show"); 
+            }, 3000);
+        }
+
+        // --- SISTEM CLOUD & SINKRONISASI ---
+        function setSyncStatus(status, icon) {
+            document.getElementById('sync-status').innerHTML = `<i class="material-icons" style="font-size:16px;">${icon}</i> ${status}`;
+        }
+
+        async function fetchDataFromSheet() {
+            setSyncStatus("Menyinkronkan...", "cloud_sync");
+            
+            if (window.AppInventor) {
+                window.AppInventor.setWebViewString("GET_DATA");
+            } else {
+                try {
+                    let response = await fetch(URL_SCRIPT);
+                    let json = await response.json();
+                    prosesDataDariCloud(json);
+                } catch (err) {
+                    setSyncStatus("Offline Mode", "cloud_off");
+                    refreshSemuaLayar();
+                }
+            }
+        }
+
+        function prosesDataDariCloud(json) {
+            if(json.tamu) dataTamu = json.tamu;
+            if(json.kamar) dataKamar = json.kamar;
+            if(json.penerima) dataPenerima = json.penerima;
+            
+            localStorage.setItem('tamu', JSON.stringify(dataTamu));
+            localStorage.setItem('kamarData', JSON.stringify(dataKamar));
+            localStorage.setItem('penerimaData', JSON.stringify(dataPenerima));
+            
+            setSyncStatus("Online", "cloud_done");
+            refreshSemuaLayar();
+        }
+
+        setInterval(() => {
+            if (window.AppInventor) {
+                let dataFromApp = window.AppInventor.getWebViewString();
+                if (dataFromApp && dataFromApp.startsWith("{") && dataFromApp.includes("tamu")) {
+                    try {
+                        let json = JSON.parse(dataFromApp);
+                        prosesDataDariCloud(json);
+                        window.AppInventor.setWebViewString(""); 
+                    } catch(e) {}
+                }
+            }
+        }, 1000);
+
+        async function sendToCloud(payload) {
+            setSyncStatus("Menyimpan...", "cloud_upload");
+            
+            if (window.AppInventor) {
+                window.AppInventor.setWebViewString("POST|" + JSON.stringify(payload));
+                
+                // Memicu notifikasi sukses setelah mengirim ke MIT App Inventor
+                showNotification("Aksi berhasil! Data sedang disimpan.");
+            } else {
+                try {
+                    await fetch(URL_SCRIPT, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                        body: JSON.stringify(payload)
+                    });
+                    setSyncStatus("Tersimpan", "cloud_done");
+                    
+                    // Memicu notifikasi sukses
+                    showNotification("Aksi berhasil tersimpan di Cloud!");
+                    
+                    setTimeout(fetchDataFromSheet, 1500);
+                } catch (err) {
+                    setSyncStatus("Offline (Tersimpan Lokal)", "cloud_off");
+                    showNotification("Tersimpan Offline. Akan dikirim saat Online.");
+                }
+            }
+        }
+
+        function refreshSemuaLayar() {
+            updateDropdowns();
+            renderList();
+            renderKamarList();
+            renderPenerimaList();
+        }
+
+        // --- SISTEM WAKTU & DROPDOWN ---
+        function now() { return new Date().toLocaleString('id-ID'); }
+        function startWaktuOtomatis() {
+            if(timerWaktu) clearInterval(timerWaktu);
+            timerWaktu = setInterval(() => {
+                if (editIndex === -1 && document.getElementById('screen-form').classList.contains('active')) {
+                    document.getElementById('waktu').value = now();
+                }
+            }, 1000);
+        }
+        startWaktuOtomatis();
+
+        function updateDropdowns() {
+            let selectPenerima = document.getElementById('penerima'); 
+            let selectKamar = document.getElementById('kamar');
+            
+            selectPenerima.innerHTML = ''; 
+            dataPenerima.forEach(p => selectPenerima.innerHTML += `<option value="${p.nama}">${p.nama}</option>`);
+            
+            selectKamar.innerHTML = '<option value="">-- Pilih Kamar --</option>'; 
+            dataKamar.forEach(k => selectKamar.innerHTML += `<option value="${k.nama}">${k.nama}</option>`);
+        }
+
+        function updateHints() {
+            let n = new Set(), a = new Set(), k = new Set();
+            dataTamu.forEach(t => { if(t.nama) n.add(t.nama); if(t.asal) a.add(t.asal); if(t.keperluan) k.add(t.keperluan); });
+            document.getElementById('hint-nama').innerHTML = Array.from(n).map(x => `<option value="${x}">`).join('');
+            document.getElementById('hint-asal').innerHTML = Array.from(a).map(x => `<option value="${x}">`).join('');
+            document.getElementById('hint-keperluan').innerHTML = Array.from(k).map(x => `<option value="${x}">`).join('');
+        }
+
+        // --- RENDER DAFTAR TAMU ---
+        // Kita menambahkan parameter 'filteredData' agar bisa menampilkan hasil pencarian
+        function renderList(filteredData = null) {
+            let container = document.getElementById('data-container');
+            container.innerHTML = '';
+
+            // Tentukan data mana yang akan dirender: data hasil pencarian ATAU semua data tamu
+            let dataToRender = filteredData ? filteredData : dataTamu;
+
+            if (dataToRender.length === 0) {
+                container.innerHTML = '<div style="text-align:center; padding: 20px; color: #888;">Data tamu tidak ditemukan</div>';
+                return;
+            }
+
+            let reversedData = [...dataToRender].reverse();
+
+            reversedData.forEach((g) => {
+                // Sangat penting: kita harus mencari index (i) dari data asli agar Edit dan Hapus tidak salah sasaran
+                let i = dataTamu.indexOf(g);
+                let isAda = (!g.status || g.status.toUpperCase() === 'ADA');
+                let badgeHTML = isAda ? `<span class="badge-status badge-ada">ADA</span>` : `<span class="badge-status badge-keluar">KELUAR</span>`;
+                let infoKeluarHTML = (!isAda && g.waktuKeluar) ? `<div style="margin-top:8px; padding:8px; background:var(--input-bg); border-radius:6px; font-size:13px;"><b>Waktu Keluar:</b> ${g.waktuKeluar}</div>` : '';
+                let btnTeks = isAda ? "Check-Out" : "Batal Keluar";
+                let btnClass = isAda ? "btn-checkout" : "btn-cancel-out";
+
+                container.innerHTML += `
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title" style="display:flex; align-items:center;">${g.nama} ${badgeHTML}</div>
+                        <div style="font-size:12px; color:#888;">Masuk:<br>${g.waktu}</div>
+                    </div>
+                    <div style="font-size:14px; line-height: 1.5;">
+                        <div>Penerima: <b>${g.penerima}</b> | Kamar: <b>${g.kamar || '-'}</b></div>
+                        <div>Asal: ${g.asal || '-'}</div>
+                    </div>
+                    ${infoKeluarHTML}
+                    <div class="card-actions">
+                        <button class="btn-action btn-edit" onclick="editData(${i})">Edit</button>
+                        <button class="btn-action ${btnClass}" onclick="toggleCheckout(${i})">${btnTeks}</button>
+                        <button class="btn-action btn-del" onclick="hapusTamu(${i})">Hapus</button>
+                    </div>
+                </div>`;
+            });
+
+            // Hanya simpan ke storage dan perbarui dashboard jika kita TIDAK sedang melakukan pencarian
+            if (!filteredData) {
+                localStorage.setItem('tamu', JSON.stringify(dataTamu));
+                updateHints();
+                renderDashboard();
+            }
+        }
+
+        // --- FUNGSI PENCARIAN TAMU ---
+        function cariTamu() {
+            // Ambil teks yang diketik pengguna dan ubah menjadi huruf kecil (agar pencarian tidak peduli huruf besar/kecil)
+            let keyword = document.getElementById('search-tamu').value.toLowerCase();
+
+            if (keyword === '') {
+                // Jika kotak pencarian kosong, tampilkan semua data
+                renderList();
+            } else {
+                // Saring data tamu berdasarkan nama, asal, atau keperluan
+                let hasilCari = dataTamu.filter(t =>
+                    (t.nama && t.nama.toLowerCase().includes(keyword)) ||
+                    (t.asal && t.asal.toLowerCase().includes(keyword)) ||
+                    (t.keperluan && t.keperluan.toLowerCase().includes(keyword))
+                );
+                // Render ulang layar dengan data hasil pencarian saja
+                renderList(hasilCari);
+            }
+        }
+
+        function toggleCheckout(i) {
+            let t = dataTamu[i];
+            if (!t.status || t.status.toUpperCase() === 'ADA') { 
+                t.status = 'KELUAR'; 
+                t.waktuKeluar = now(); 
+            } else { 
+                t.status = 'ADA'; 
+                t.waktuKeluar = ''; 
+            }
+            renderList();
+            
+            if(t.rowIndex) {
+                sendToCloud({
+                    action: "updateGuest", rowIndex: t.rowIndex,
+                    waktu: t.waktu, nama: t.nama, asal: t.asal, pengikut: t.pengikut,
+                    kamar: t.kamar, keperluan: t.keperluan, penerima: t.penerima,
+                    status: t.status, waktuKeluar: t.waktuKeluar
+                });
+            } else {
+                alert("Mohon tunggu sinkronisasi data awal selesai sebelum melakukan Check-out.");
+            }
+        }
+
+        // --- DASHBOARD ---
+function renderDashboard() {
+    let totalOrang = 0; // Variabel baru untuk menghitung total orang
+
+    let statusKamar = {};
+    dataKamar.forEach(k => { statusKamar[k.nama] = []; });
+
+    let kamarTerisiCount = 0;
+
+    // Memeriksa setiap data tamu satu per satu
+    dataTamu.forEach(t => {
+        let isAda = (!t.status || t.status.toUpperCase() === 'ADA');
+
+        // 1. Menghitung Total Tamu + Pengikut (Hanya yang berstatus ADA)
+        if (isAda) {
+            // Ubah teks pengikut menjadi angka matematika. Jika kosong, anggap 0.
+            let jumlahPengikut = parseInt(t.pengikut) || 0;
+            // Tambahkan 1 (Tamu Utama) + jumlah pengikutnya ke total keseluruhan
+            totalOrang += (1 + jumlahPengikut);
+        }
+
+        // 2. Memasukkan tamu ke dalam status kamar
+        if(t.kamar && statusKamar[t.kamar] !== undefined && isAda) {
+            statusKamar[t.kamar].push(t.nama);
+        }
+    });
+
+    // Menampilkan angka total orang ke layar Beranda
+    document.getElementById('dash-total').innerText = totalOrang;
+
+    let htmlKamar = '';
+    for (let k in statusKamar) {
+        let isFilled = statusKamar[k].length > 0;
+        if(isFilled) kamarTerisiCount++;
+        htmlKamar += `<div style="margin-bottom: 8px;"><span class="room-badge ${isFilled ? 'room-filled' : 'room-empty'}">${k}</span> <span style="font-size: 13px;">${isFilled ? `(${statusKamar[k].join(', ')})` : '(Kosong)'}</span></div>`;
+    }
+    document.getElementById('dash-kamar').innerText = kamarTerisiCount;
+    document.getElementById('room-status-container').innerHTML = htmlKamar;
+
+    updateChart();
+}
+
+        function updateChart() {
+            let labelGrafik = [], dataGrafik = []; let countPerDay = {};
+            dataTamu.forEach(t => { 
+                if(t.waktu) {
+                    let tanggalSaja = t.waktu.split(',')[0] || t.waktu.split(' ')[0]; 
+                    countPerDay[tanggalSaja] = (countPerDay[tanggalSaja] || 0) + 1; 
+                }
+            });
+            for(let tgl in countPerDay){ labelGrafik.push(tgl); dataGrafik.push(countPerDay[tgl]); }
+            let ctx = document.getElementById('tamuChart').getContext('2d');
+            if(chartInstance) chartInstance.destroy(); 
+            chartInstance = new Chart(ctx, { type: 'bar', data: { labels: labelGrafik.length ? labelGrafik : ['Belum ada'], datasets: [{ label: 'Tamu Masuk', data: dataGrafik.length ? dataGrafik : [0], backgroundColor: 'rgba(98, 0, 238, 0.5)' }] } });
+        }
+
+        // --- AKSI FORM TAMU ---
+        function openForm() { 
+            editIndex = -1; 
+            document.getElementById('f').reset(); 
+            document.getElementById('pengikut').value = 0;
+            document.getElementById('waktu').value = now(); 
+            document.getElementById('btn-submit').innerText = "SIMPAN DATA"; 
+            switchTab('form'); 
+        }
+        
+        function editData(i) {
+            editIndex = i; let t = dataTamu[i]; 
+            document.getElementById('waktu').value = t.waktu;
+            document.getElementById('penerima').value = t.penerima; 
+            document.getElementById('nama').value = t.nama;
+            document.getElementById('pengikut').value = t.pengikut; 
+            document.getElementById('asal').value = t.asal;
+            document.getElementById('keperluan').value = t.keperluan; 
+            document.getElementById('kamar').value = t.kamar || "";
+            document.getElementById('btn-submit').innerText = "UPDATE DATA"; 
+            switchTab('form');
+        }
+
+        function hapusTamu(i) {
+            if(confirm('Hapus tamu ini secara permanen?')) { 
+                let target = dataTamu[i];
+                dataTamu.splice(i, 1); 
+                renderList(); 
+                if(target.rowIndex) sendToCloud({ action: "deleteGuest", rowIndex: target.rowIndex });
+            } 
+        }
+
+        document.getElementById('f').onsubmit = e => {
+            e.preventDefault(); 
+            let dataLama = (editIndex !== -1) ? dataTamu[editIndex] : {};
+            
+            let d = {
+                waktu: document.getElementById('waktu').value, 
+                penerima: document.getElementById('penerima').value, 
+                nama: document.getElementById('nama').value,
+                pengikut: document.getElementById('pengikut').value, 
+                asal: document.getElementById('asal').value, 
+                keperluan: document.getElementById('keperluan').value, 
+                kamar: document.getElementById('kamar').value,
+                status: (editIndex === -1) ? 'ADA' : (dataLama.status || 'ADA'), 
+                waktuKeluar: (editIndex === -1) ? '' : (dataLama.waktuKeluar || ''),
+                rowIndex: dataLama.rowIndex || null
+            };
+
+            if(editIndex === -1) {
+                dataTamu.push(d);
+                sendToCloud({ action: "addGuest", ...d });
+            } else {
+                dataTamu[editIndex] = d;
+                if(d.rowIndex) sendToCloud({ action: "updateGuest", ...d });
+            }
+            
+            renderList(); 
+            switchTab('list');
+        };
+
+        // --- KELOLA KAMAR ---
+        function renderKamarList() {
+            let container = document.getElementById('kamar-container'); container.innerHTML = '';
+            dataKamar.forEach((k, i) => {
+                container.innerHTML += `<div class="card" style="display:flex; justify-content:space-between; align-items:center;">
+                    <b>Kamar ${k.nama}</b>
+                    <button class="btn-action btn-del" onclick="hapusKamar(${i})">Hapus</button>
+                </div>`;
+            });
+        }
+
+        function tambahKamarPrompt() {
+            let k = prompt("Masukkan Nama / Nomor Kamar Baru:");
+            if(k) {
+                dataKamar.push({ nama: k });
+                localStorage.setItem('kamarData', JSON.stringify(dataKamar));
+                updateDropdowns(); renderKamarList();
+                sendToCloud({ action: "addKamar", namaKamar: k });
+            }
+        }
+
+        function hapusKamar(i) {
+            if(confirm("Hapus kamar ini?")) {
+                let target = dataKamar[i];
+                dataKamar.splice(i, 1);
+                localStorage.setItem('kamarData', JSON.stringify(dataKamar));
+                updateDropdowns(); renderKamarList();
+                if(target.rowIndex) sendToCloud({ action: "deleteKamar", rowIndex: target.rowIndex });
+            }
+        }
+
+        // --- KELOLA PENERIMA (CV) ---
+        function renderPenerimaList() {
+            let container = document.getElementById('penerima-container'); container.innerHTML = '';
+            dataPenerima.forEach((p, i) => {
+                container.innerHTML += `<div class="card">
+                    <div class="card-title">${p.nama}</div>
+                    <div style="font-size:14px; margin-top:4px;">No HP: <b>${p.noHP || '-'}</b></div>
+                    <div style="font-size:14px;">Alamat: ${p.alamat || '-'}</div>
+                    <div class="card-actions">
+                        <button class="btn-action btn-edit" onclick="bukaFormPenerima(${i})">Edit</button>
+                        <button class="btn-action btn-del" onclick="hapusPenerima(${i})">Hapus</button>
+                    </div>
+                </div>`;
+            });
+        }
+
+        function bukaFormPenerima(i) {
+            editPenerimaIndex = i;
+            if(i === -1) { document.getElementById('form-penerima').reset(); } 
+            else {
+                let p = dataPenerima[i];
+                document.getElementById('p-nama').value = p.nama;
+                document.getElementById('p-nohp').value = p.noHP || '';
+                document.getElementById('p-alamat').value = p.alamat || '';
+            }
+            switchTab('penerima-form');
+        }
+
+        document.getElementById('form-penerima').onsubmit = e => {
+            e.preventDefault();
+            let nama = document.getElementById('p-nama').value;
+            let noHP = document.getElementById('p-nohp').value;
+            let alamat = document.getElementById('p-alamat').value;
+            
+            if(editPenerimaIndex === -1) {
+                dataPenerima.push({ nama, noHP, alamat });
+                sendToCloud({ action: "addPenerima", nama, noHP, alamat });
+            } else {
+                let target = dataPenerima[editPenerimaIndex];
+                target.nama = nama; target.noHP = noHP; target.alamat = alamat;
+                if(target.rowIndex) sendToCloud({ action: "updatePenerima", rowIndex: target.rowIndex, nama, noHP, alamat });
+            }
+            
+            localStorage.setItem('penerimaData', JSON.stringify(dataPenerima));
+            updateDropdowns(); renderPenerimaList(); switchTab('penerima-list');
+        };
+
+        function hapusPenerima(i) {
+            if(confirm("Hapus penerima ini?")) {
+                let target = dataPenerima[i];
+                dataPenerima.splice(i, 1);
+                localStorage.setItem('penerimaData', JSON.stringify(dataPenerima));
+                updateDropdowns(); renderPenerimaList();
+                if(target.rowIndex) sendToCloud({ action: "deletePenerima", rowIndex: target.rowIndex });
+            }
+        }
+
+        // --- NAVIGASI ---
+        function toggleTheme() { let isDark = document.body.classList.toggle('dark-mode'); document.getElementById('theme-icon').innerText = isDark ? "light_mode" : "dark_mode"; localStorage.setItem('theme', isDark ? 'dark' : 'light'); }
+        if(localStorage.getItem('theme') === 'dark') toggleTheme();
+
+        function switchTab(tab) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active')); 
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            let fab = document.getElementById('fab-add');
+
+            if(tab === 'beranda') { 
+                document.getElementById('screen-beranda').classList.add('active'); 
+                document.querySelectorAll('.nav-item')[0].classList.add('active'); 
+                document.getElementById('app-title').innerText = "Beranda";
+                fab.classList.remove('hidden'); renderDashboard(); 
+            } 
+            else if(tab === 'list') { 
+                document.getElementById('screen-list').classList.add('active'); 
+                document.querySelectorAll('.nav-item')[1].classList.add('active'); 
+                document.getElementById('app-title').innerText = "Daftar Tamu";
+                fab.classList.remove('hidden'); renderList(); 
+            } 
+            else if(tab === 'settings') { 
+                document.getElementById('screen-settings').classList.add('active'); 
+                document.querySelectorAll('.nav-item')[2].classList.add('active'); 
+                document.getElementById('app-title').innerText = "Pengaturan";
+                fab.classList.add('hidden'); 
+            }
+            else if(tab === 'kamar-list') {
+                document.getElementById('screen-kamar-list').classList.add('active');
+                document.getElementById('app-title').innerText = "Kelola Kamar";
+                fab.classList.add('hidden'); renderKamarList();
+            }
+            else if(tab === 'penerima-list') {
+                document.getElementById('screen-penerima-list').classList.add('active');
+                document.getElementById('app-title').innerText = "Kelola Penerima";
+                fab.classList.add('hidden'); renderPenerimaList();
+            }
+            else if(tab === 'penerima-form') {
+                document.getElementById('screen-penerima-form').classList.add('active');
+                document.getElementById('app-title').innerText = editPenerimaIndex === -1 ? "Tambah Penerima" : "Edit Penerima";
+                fab.classList.add('hidden');
+            }
+            else if(tab === 'form') { 
+                document.getElementById('screen-form').classList.add('active'); 
+                document.getElementById('app-title').innerText = editIndex === -1 ? "Tambah Tamu" : "Edit Tamu";
+                fab.classList.add('hidden'); 
+            }
+        }
+
+        // Panggil Sinkronisasi saat web pertama dibuka!
+        fetchDataFromSheet();
+    </script>
+</body>
+</html>
