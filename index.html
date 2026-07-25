@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="utf-8">
+    <title>Aplikasi Rekap Stok Barang</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- Skrip Pengaman: Cek apakah user sudah login -->
+    <script>
+        if (localStorage.getItem('isLoggedIn') !== 'true') {
+            window.location.href = 'login.html'; // Lempar kembali ke halaman login jika belum masuk
+        }
+    </script>
+
+    <div class="container">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h2>Dashboard Rekap Stok Barang</h2>
+            <button class="btn btn-danger" onclick="logout()">Logout</button>
+        </div>
+
+        <!-- STATS HIGHLIGHT -->
+        <div class="stats-container">
+            <div class="stat-box">
+                <div>Total Jenis Barang</div>
+                <h3 id="stat-jenis">0</h3>
+            </div>
+            <div class="stat-box">
+                <div>Total Stok Keseluruhan</div>
+                <h3 id="stat-total-stok">0</h3>
+            </div>
+        </div>
+
+        <!-- FORM INPUT BARANG -->
+        <div style="background: #f8f9fa; padding: 16px; border-radius: 8px; margin-bottom: 24px;">
+            <h3 style="margin-bottom: 12px; font-size: 16px;">Tambah / Rekap Barang</h3>
+            <form id="form-stok">
+                <div class="form-group">
+                    <label>Nama Barang</label>
+                    <input type="text" id="nama" required autocomplete="off">
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-group">
+                        <label>Jumlah Masuk</label>
+                        <input type="number" id="masuk" value="0" min="0" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Jumlah Keluar</label>
+                        <input type="number" id="keluar" value="0" min="0" required>
+                    </div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-group">
+                        <label>Tanggal Masuk</label>
+                        <input type="date" id="tglMasuk" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Tanggal Keluar</label>
+                        <input type="date" id="tglKeluar">
+                    </div>
+                </div>
+                <button type="submit" class="btn">SIMPAN DATA</button>
+            </form>
+        </div>
+
+        <!-- TABEL DATA REKAP -->
+        <h3>Daftar Stok Barang</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Nama Barang</th>
+                    <th>Masuk (Tgl)</th>
+                    <th>Keluar (Tgl)</th>
+                    <th>Sisa Stok (Total)</th>
+                    <th>Aksi</th>
+                </tr>
+            </thead>
+            <tbody id="tabel-data">
+                <!-- Data akan dimasukkan otomatis lewat JavaScript -->
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        // Mengambil data dari memori lokal browser
+        let dataStok = JSON.parse(localStorage.getItem('stokBarang') || '[]');
+
+        function simpanDanRender() {
+            localStorage.setItem('stokBarang', JSON.stringify(dataStok));
+            renderTabel();
+            hitungStatistik();
+        }
+
+        // Hitung Statistik Highlight secara otomatis
+        function hitungStatistik() {
+            document.getElementById('stat-jenis').innerText = dataStok.length;
+
+            let totalStokKeseluruhan = 0;
+            dataStok.forEach(item => {
+                let sisa = parseInt(item.masuk) - parseInt(item.keluar);
+                totalStokKeseluruhan += sisa;
+            });
+            document.getElementById('stat-total-stok').innerText = totalStokKeseluruhan;
+        }
+
+        // Render atau tampilkan data ke dalam tabel & hitung total otomatis
+        function renderTabel() {
+            let tbody = document.getElementById('tabel-data');
+            tbody.innerHTML = '';
+
+            if (dataStok.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #775;">Belum ada data stok.</td></tr>`;
+                return;
+            }
+
+            dataStok.forEach((item, index) => {
+                // Perhitungan total otomatis (Masuk dikurang Keluar)
+                let sisaStok = parseInt(item.masuk) - parseInt(item.keluar);
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td><b>${item.nama}</b></td>
+                        <td>${item.masuk} <br><small style="color:#666">${item.tglMasuk || '-'}</small></td>
+                        <td>${item.keluar} <br><small style="color:#666">${item.tglKeluar || '-'}</small></td>
+                        <td><b>${sisaStok}</b></td>
+                        <td><button class="btn btn-danger" onclick="hapusData(${index})">Hapus</button></td>
+                    </tr>
+                `;
+            });
+        }
+
+        // Proses submit form tambah barang
+        document.getElementById('form-stok').onsubmit = function(e) {
+            e.preventDefault();
+
+            let barangBaru = {
+                nama: document.getElementById('nama').value,
+                masuk: document.getElementById('masuk').value || 0,
+                keluar: document.getElementById('keluar').value || 0,
+                tglMasuk: document.getElementById('tglMasuk').value,
+                tglKeluar: document.getElementById('tglKeluar').value
+            };
+
+            dataStok.push(barangBaru);
+            simpanDanRender();
+            this.reset();
+        };
+
+        // Fungsi Hapus Data
+        function hapusData(index) {
+            if (confirm("Yakin ingin menghapus data ini?")) {
+                dataStok.splice(index, 1);
+                simpanDanRender();
+            }
+        }
+
+        // Fungsi Logout
+        function logout() {
+            localStorage.removeItem('isLoggedIn');
+            window.location.href = 'login.html';
+        }
+
+        // Jalankan saat pertama kali halaman dibuka
+        renderTabel();
+        hitungStatistik();
+    </script>
+</body>
+</html>
