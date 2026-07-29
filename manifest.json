@@ -1,0 +1,22 @@
+{
+  "name": "Aplikasi Recap Stok & Kasir",
+  "short_name": "Recap App",
+  "description": "Aplikasi Kasir dan Stok Barang Serverless",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f8f9fa",
+  "theme_color": "#0d6efd",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

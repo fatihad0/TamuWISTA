@@ -1,169 +1,140 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-    <meta charset="utf-8">
-    <title>Aplikasi Rekap Stok Barang</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Meta tag untuk PWA -->
+    <meta name="theme-color" content="#0d6efd">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    
+    <title>Aplikasi Recap Stok & Kasir</title>
+    
+    <!-- CSS Eksternal -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<body class="bg-light">
 
-    <!-- Skrip Pengaman: Cek apakah user sudah login -->
-    <script>
-        if (localStorage.getItem('isLoggedIn') !== 'true') {
-            window.location.href = 'login.html'; // Lempar kembali ke halaman login jika belum masuk
-        }
-    </script>
+<!-- Indikator Loading -->
+<div id="loading-overlay">
+    <div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div>
+    <span class="ms-3 fw-bold">Memproses data ke Google Sheets...</span>
+</div>
 
-    <div class="container">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-            <h2>Dashboard Rekap Stok Barang</h2>
-            <button class="btn btn-danger" onclick="logout()">Logout</button>
-        </div>
-
-        <!-- STATS HIGHLIGHT -->
-        <div class="stats-container">
-            <div class="stat-box">
-                <div>Total Jenis Barang</div>
-                <h3 id="stat-jenis">0</h3>
-            </div>
-            <div class="stat-box">
-                <div>Total Stok Keseluruhan</div>
-                <h3 id="stat-total-stok">0</h3>
-            </div>
-        </div>
-
-        <!-- FORM INPUT BARANG -->
-        <div style="background: #f8f9fa; padding: 16px; border-radius: 8px; margin-bottom: 24px;">
-            <h3 style="margin-bottom: 12px; font-size: 16px;">Tambah / Rekap Barang</h3>
-            <form id="form-stok">
-                <div class="form-group">
-                    <label>Nama Barang</label>
-                    <input type="text" id="nama" required autocomplete="off">
-                </div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                    <div class="form-group">
-                        <label>Jumlah Masuk</label>
-                        <input type="number" id="masuk" value="0" min="0" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Jumlah Keluar</label>
-                        <input type="number" id="keluar" value="0" min="0" required>
-                    </div>
-                </div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                    <div class="form-group">
-                        <label>Tanggal Masuk</label>
-                        <input type="date" id="tglMasuk" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Tanggal Keluar</label>
-                        <input type="date" id="tglKeluar">
-                    </div>
-                </div>
-                <button type="submit" class="btn">SIMPAN DATA</button>
-            </form>
-        </div>
-
-        <!-- TABEL DATA REKAP -->
-        <h3>Daftar Stok Barang</h3>
-        <table>
-            <thead>
-                <tr>
-                    <th>Nama Barang</th>
-                    <th>Masuk (Tgl)</th>
-                    <th>Keluar (Tgl)</th>
-                    <th>Sisa Stok (Total)</th>
-                    <th>Aksi</th>
-                </tr>
-            </thead>
-            <tbody id="tabel-data">
-                <!-- Data akan dimasukkan otomatis lewat JavaScript -->
-            </tbody>
-        </table>
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>📦 Aplikasi Recap Barang</h2>
+        <div>Kasir Aktif: <strong>Admin Utama</strong></div>
     </div>
 
-    <script>
-        // Mengambil data dari memori lokal browser
-        let dataStok = JSON.parse(localStorage.getItem('stokBarang') || '[]');
+    <ul class="nav nav-pills mb-4" id="pills-tab" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="tab-kasir" data-bs-toggle="pill" data-bs-target="#kasir" type="button">🛒 Kasir</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="tab-stok" data-bs-toggle="pill" data-bs-target="#stok" type="button">📦 Input Stok</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="tab-laporan" data-bs-toggle="pill" data-bs-target="#laporan" type="button">📊 Laporan</button>
+        </li>
+    </ul>
 
-        function simpanDanRender() {
-            localStorage.setItem('stokBarang', JSON.stringify(dataStok));
-            renderTabel();
-            hitungStatistik();
-        }
+    <div class="tab-content" id="pills-tabContent">
 
-        // Hitung Statistik Highlight secara otomatis
-        function hitungStatistik() {
-            document.getElementById('stat-jenis').innerText = dataStok.length;
+        <!-- ANTARMUKA KASIR -->
+        <div class="tab-pane fade show active" id="kasir">
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="card p-3 shadow-sm">
+                        <h5>Data Transaksi</h5>
+                        <input type="text" id="kasir-konsumen" class="form-control mb-2" placeholder="Nama Konsumen (Opsional)">
+                        <select id="kasir-barang" class="form-select mb-2"></select>
+                        <input type="number" id="kasir-qty" class="form-control mb-2" placeholder="Jumlah (Qty)" min="1" value="1">
+                        <button class="btn btn-primary w-100" onclick="tambahKeKeranjang()">Tambah ke Keranjang</button>
+                    </div>
+                </div>
+                <div class="col-md-8">
+                    <div class="card p-3 shadow-sm">
+                        <h5>Keranjang Belanja</h5>
+                        <table class="table">
+                            <thead><tr><th>Nama</th><th>Qty</th><th>Harga</th><th>Subtotal</th><th>Aksi</th></tr></thead>
+                            <tbody id="tabel-keranjang"></tbody>
+                        </table>
+                        <h4 class="text-end">Total: Rp <span id="total-belanja">0</span></h4>
+                        <button class="btn btn-success mt-2" onclick="prosesCheckout()">Bayar & Cetak Resi</button>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-            let totalStokKeseluruhan = 0;
-            dataStok.forEach(item => {
-                let sisa = parseInt(item.masuk) - parseInt(item.keluar);
-                totalStokKeseluruhan += sisa;
-            });
-            document.getElementById('stat-total-stok').innerText = totalStokKeseluruhan;
-        }
+        <!-- INPUT BARANG -->
+        <div class="tab-pane fade" id="stok">
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="card p-3 shadow-sm">
+                        <h5>Input Barang Baru</h5>
+                        <input type="text" id="input-nama" class="form-control mb-2" placeholder="Nama Barang">
+                        <input type="number" id="input-stok" class="form-control mb-2" placeholder="Banyak (Stok)">
+                        <input type="number" id="input-harga" class="form-control mb-2" placeholder="Harga Satuan (Rp)">
+                        <button class="btn btn-primary w-100" onclick="simpanBarang()">Simpan Barang</button>
+                    </div>
+                </div>
+                <div class="col-md-8">
+                    <div class="card p-3 shadow-sm">
+                        <h5>Daftar Stok Barang <button class="btn btn-sm btn-outline-secondary float-end" onclick="loadBarang()">Refresh</button></h5>
+                        <table class="table table-striped">
+                            <thead><tr><th>ID</th><th>Nama Barang</th><th>Stok</th><th>Harga</th></tr></thead>
+                            <tbody id="tabel-stok"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-        // Render atau tampilkan data ke dalam tabel & hitung total otomatis
-        function renderTabel() {
-            let tbody = document.getElementById('tabel-data');
-            tbody.innerHTML = '';
+        <!-- LAPORAN -->
+        <div class="tab-pane fade" id="laporan">
+            <div class="card p-3 shadow-sm">
+                <h5>Laporan Transaksi <button class="btn btn-sm btn-outline-secondary float-end" onclick="loadLaporan()">Refresh</button></h5>
+                <table class="table table-bordered mt-2">
+                    <thead><tr><th>No Trx</th><th>Tanggal</th><th>Konsumen</th><th>Kasir</th><th>Total Pendapatan</th></tr></thead>
+                    <tbody id="tabel-laporan"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
 
-            if (dataStok.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #775;">Belum ada data stok.</td></tr>`;
-                return;
-            }
+<!-- Modal Resi -->
+<div class="modal fade" id="modalResi" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Transaksi Berhasil</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="area-print-resi">
+        <div class="text-center mb-3">
+            <h4>Toko Recap Maju</h4>
+            <small id="resi-tanggal"></small>
+        </div>
+        <p><strong>Konsumen:</strong> <span id="resi-konsumen"></span><br>
+           <strong>Kasir:</strong> <span id="resi-kasir"></span></p>
+        <hr>
+        <table class="table table-sm text-end" id="resi-items"></table>
+        <hr>
+        <h5 class="text-end">Total: Rp <span id="resi-total"></span></h5>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-success" onclick="kirimResiWA()">📱 Kirim (WhatsApp)</button>
+        <button type="button" class="btn btn-secondary" onclick="window.print()">🖨️ Print Resi</button>
+      </div>
+    </div>
+  </div>
+</div>
 
-            dataStok.forEach((item, index) => {
-                // Perhitungan total otomatis (Masuk dikurang Keluar)
-                let sisaStok = parseInt(item.masuk) - parseInt(item.keluar);
-
-                tbody.innerHTML += `
-                    <tr>
-                        <td><b>${item.nama}</b></td>
-                        <td>${item.masuk} <br><small style="color:#666">${item.tglMasuk || '-'}</small></td>
-                        <td>${item.keluar} <br><small style="color:#666">${item.tglKeluar || '-'}</small></td>
-                        <td><b>${sisaStok}</b></td>
-                        <td><button class="btn btn-danger" onclick="hapusData(${index})">Hapus</button></td>
-                    </tr>
-                `;
-            });
-        }
-
-        // Proses submit form tambah barang
-        document.getElementById('form-stok').onsubmit = function(e) {
-            e.preventDefault();
-
-            let barangBaru = {
-                nama: document.getElementById('nama').value,
-                masuk: document.getElementById('masuk').value || 0,
-                keluar: document.getElementById('keluar').value || 0,
-                tglMasuk: document.getElementById('tglMasuk').value,
-                tglKeluar: document.getElementById('tglKeluar').value
-            };
-
-            dataStok.push(barangBaru);
-            simpanDanRender();
-            this.reset();
-        };
-
-        // Fungsi Hapus Data
-        function hapusData(index) {
-            if (confirm("Yakin ingin menghapus data ini?")) {
-                dataStok.splice(index, 1);
-                simpanDanRender();
-            }
-        }
-
-        // Fungsi Logout
-        function logout() {
-            localStorage.removeItem('isLoggedIn');
-            window.location.href = 'login.html';
-        }
-
-        // Jalankan saat pertama kali halaman dibuka
-        renderTabel();
-        hitungStatistik();
-    </script>
+<!-- Script Eksternal -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="script.js"></script>
 </body>
 </html>
